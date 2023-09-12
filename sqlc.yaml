@@ -7,7 +7,7 @@ sql:
       go:
         package: "db"
         sql_package: "pgx/v5"
-        out: "database/sqlc"
+        out: "database/db"
         emit_db_tags: true
         emit_json_tags: true
         emit_interface: true

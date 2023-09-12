@@ -27,4 +27,7 @@ sqlc_generate:
 run_test:
 	go test -v -cover ./...
 
-.PHONY: create_container create_database delete_database open_database migrate_up migrate_down sqlc_generate run_test
+run_server:
+	go run main.go
+
+.PHONY: create_container create_database delete_database open_database migrate_up migrate_down sqlc_generate run_test run_server
