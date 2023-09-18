@@ -5,14 +5,18 @@ import (
 	"log"
 	"main/api"
 	"main/database/db"
+	"main/util"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const ()
-
 func main() {
-	conn, err := pgxpool.New(context.Background(), DATABASE_URL)
+	cfg, err := util.LoadConfig(".env")
+	if err != nil {
+		log.Fatal("cannot load config:", err)
+	}
+
+	conn, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal("cannot connect to db:", err)
 	}
@@ -20,7 +24,7 @@ func main() {
 	store := db.NewStore(conn)
 	server := api.NewServer(store)
 
-	err = server.Start(SERVER_ADDR)
+	err = server.Start(cfg.ServerAddress)
 	if err != nil {
 		log.Fatal("cannot start server:", err)
 	}

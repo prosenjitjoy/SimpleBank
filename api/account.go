@@ -10,13 +10,13 @@ import (
 
 type createAccountRequest struct {
 	Owner    string `json:"owner" binding:"required"`
-	Currency string `json:"currency" binding:"required,oneof=USD EUR"`
+	Currency string `json:"currency" binding:"required,oneof=USD EUR CAD"`
 }
 
 func (s *Server) createAccount(ctx *gin.Context) {
 	var req createAccountRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.IndentedJSON(http.StatusBadRequest, errorResponse(err))
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
@@ -28,11 +28,11 @@ func (s *Server) createAccount(ctx *gin.Context) {
 
 	account, err := s.store.CreateAccount(ctx, &arg)
 	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.IndentedJSON(http.StatusOK, account)
+	ctx.JSON(http.StatusOK, account)
 }
 
 type getAccountRequest struct {
@@ -42,22 +42,22 @@ type getAccountRequest struct {
 func (s *Server) getAcount(ctx *gin.Context) {
 	var req getAccountRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
-		ctx.IndentedJSON(http.StatusBadRequest, errorResponse(err))
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
 	account, err := s.store.GetAccount(ctx, req.ID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			ctx.IndentedJSON(http.StatusNotFound, errorResponse(err))
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 
-		ctx.IndentedJSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.IndentedJSON(http.StatusOK, account)
+	ctx.JSON(http.StatusOK, account)
 }
 
 type listAccountRequest struct {
@@ -68,7 +68,7 @@ type listAccountRequest struct {
 func (s *Server) listAcount(ctx *gin.Context) {
 	var req listAccountRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
-		ctx.IndentedJSON(http.StatusBadRequest, errorResponse(err))
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
@@ -79,11 +79,11 @@ func (s *Server) listAcount(ctx *gin.Context) {
 
 	accounts, err := s.store.ListAccounts(ctx, arg)
 	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.IndentedJSON(http.StatusOK, accounts)
+	ctx.JSON(http.StatusOK, accounts)
 }
 
 type updateAccountURI struct {
@@ -97,13 +97,13 @@ type updateAccountJSON struct {
 func (s *Server) updateAccount(ctx *gin.Context) {
 	var uri updateAccountURI
 	if err := ctx.ShouldBindUri(&uri); err != nil {
-		ctx.IndentedJSON(http.StatusBadRequest, errorResponse(err))
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
 	var req updateAccountJSON
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.IndentedJSON(http.StatusBadRequest, errorResponse(err))
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
@@ -115,15 +115,15 @@ func (s *Server) updateAccount(ctx *gin.Context) {
 	account, err := s.store.UpdateAccount(ctx, arg)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			ctx.IndentedJSON(http.StatusNotFound, errorResponse(err))
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 
-		ctx.IndentedJSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.IndentedJSON(http.StatusOK, account)
+	ctx.JSON(http.StatusOK, account)
 }
 
 type deleteAccountRequest struct {
@@ -133,19 +133,19 @@ type deleteAccountRequest struct {
 func (s *Server) deleteAccount(ctx *gin.Context) {
 	var req deleteAccountRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
-		ctx.IndentedJSON(http.StatusBadRequest, errorResponse(err))
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
 	err := s.store.DeleteAccount(ctx, req.ID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			ctx.IndentedJSON(http.StatusNotFound, errorResponse(err))
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
-		ctx.IndentedJSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.IndentedJSON(http.StatusOK, gin.H{"msg": "successfully deleted"})
+	ctx.JSON(http.StatusOK, gin.H{"msg": "successfully deleted"})
 }

@@ -1,16 +1,19 @@
 package util
 
-import "github.com/spf13/viper"
+import "github.com/ilyakaznacheev/cleanenv"
 
-// Config stores all configuration of the applications.
-// The values are read by viper from a config file or environment variables.
-type Config struct {
-	DatabaseURL   string `mapstructure:"DATABASE_URL"`
-	ServerAddress string `mapstructure:"SERVER_ADDR"`
+type ConfigDatabase struct {
+	DatabaseURL   string `env:"DATABASE_URL" env-required:"true"`
+	ServerAddress string `env:"SERVER_ADDR" env-required:"true"`
 }
 
-// LoadConfig read configuration from file or environment variables
-func LoadConfig(path string) (config *Config, err error) {
-	viper.AddConfigPath(path)
-	viper.SetConfigType("env")
+func LoadConfig(path string) (*ConfigDatabase, error) {
+	var cfg ConfigDatabase
+
+	err := cleanenv.ReadConfig(path, &cfg)
+	if err != nil {
+		return &ConfigDatabase{}, err
+	}
+
+	return &cfg, nil
 }

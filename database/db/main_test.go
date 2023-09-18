@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"log"
+	"main/util"
 	"math/rand"
 	"os"
 	"testing"
@@ -13,11 +14,13 @@ import (
 var testQueries *Queries
 var testDB *pgxpool.Pool
 
-const DATABASE_URL = "postgres://postgres:postgres@localhost:5432/bankdb"
-
 func TestMain(m *testing.M) {
-	var err error
-	testDB, err = pgxpool.New(context.Background(), DATABASE_URL)
+	cfg, err := util.LoadConfig("../../.env")
+	if err != nil {
+		log.Fatal("cannot load config:", err)
+	}
+
+	testDB, err = pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal("cannot connect to db:", err)
 	}
