@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"main/database/db"
 	"net/http"
 
@@ -10,7 +11,7 @@ import (
 
 type createAccountRequest struct {
 	Owner    string `json:"owner" binding:"required"`
-	Currency string `json:"currency" binding:"required,oneof=USD EUR CAD"`
+	Currency string `json:"currency" binding:"required,currency"`
 }
 
 func (s *Server) createAccount(ctx *gin.Context) {
@@ -106,6 +107,7 @@ func (s *Server) updateAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+	fmt.Println(req, "***")
 
 	arg := &db.UpdateAccountParams{
 		ID:      uri.ID,

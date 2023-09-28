@@ -16,10 +16,16 @@ create_migration:
 	migrate create -ext sql -dir database/migration -seq create_tables
 
 migrate_up:
-	migrate -database ${MIGRATE_URL} -path database/migration up
+	migrate -database ${MIGRATE_URL} -path database/migration -verbose up
+
+migrate_up_last:
+	migrate -database ${MIGRATE_URL} -path database/migration -verbose up 1
 
 migrate_down:
-	migrate -database ${MIGRATE_URL} -path database/migration down
+	migrate -database ${MIGRATE_URL} -path database/migration -verbose down
+
+migrate_down_last:
+	migrate -database ${MIGRATE_URL} -path database/migration -verbose down 1
 
 sqlc_generate:
 	sqlc generate
@@ -33,4 +39,4 @@ run_test:
 run_server:
 	go run main.go
 
-.PHONY: create_container create_database delete_database open_database create_migration migrate_up migrate_down sqlc_generate mock_generate run_test run_server
+.PHONY: create_container create_database delete_database open_database create_migration migrate_up migrate_up_last migrate_down migrate_down_last sqlc_generate mock_generate run_test run_server

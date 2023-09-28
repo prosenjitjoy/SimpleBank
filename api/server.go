@@ -4,6 +4,8 @@ import (
 	"main/database/db"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 )
 
 // Server serves HTTP request for our banking service.
@@ -17,11 +19,18 @@ func NewServer(store db.Store) *Server {
 	server := &Server{store: store}
 
 	router := gin.Default()
+
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterValidation("currency", validCurrency)
+	}
+
 	router.POST("/accounts", server.createAccount)
 	router.GET("/accounts/:id", server.getAcount)
 	router.GET("/accounts", server.listAcount)
 	router.PATCH("/accounts/:id", server.updateAccount)
 	router.DELETE("/accounts/:id", server.deleteAccount)
+
+	router.POST("/transfers", server.createTransfer)
 
 	server.router = router
 	return server
