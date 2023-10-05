@@ -1,17 +1,22 @@
 module main
 
-go 1.21
+go 1.21.1
 
 require (
+	aidanwoods.dev/go-paseto v1.5.0
 	github.com/gin-gonic/gin v1.9.1
-	github.com/go-playground/validator/v10 v10.14.0
+	github.com/go-playground/validator/v10 v10.15.4
+	github.com/golang-jwt/jwt/v5 v5.0.0
+	github.com/google/uuid v1.3.1
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/mock v0.3.0
+	golang.org/x/crypto v0.13.0
 )
 
 require (
+	aidanwoods.dev/go-result v0.1.0 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
@@ -38,11 +43,10 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect

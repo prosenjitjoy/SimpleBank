@@ -31,7 +31,7 @@ sqlc_generate:
 	sqlc generate
 
 mock_generate:
-	mockgen -package mockdb -destination database/mock/store.go main/database/db Store
+	mockgen -package mockdb -destination database/mockdb/store.go main/database/db Store
 
 run_test:
 	go test -v -cover ./...
