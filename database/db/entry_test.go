@@ -10,21 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func createRandomEntry(t *testing.T) Entry {
-	filter := ListAccountsParams{
-		Limit:  100,
-		Offset: 0,
-	}
-
-	accounts, err := testQueries.ListAccounts(context.Background(), &filter)
-	require.NoError(t, err)
-
+func createRandomEntry(t *testing.T, account Account) Entry {
 	arg := CreateEntryParams{
-		AccountID: randomAccountID(accounts),
+		AccountID: account.ID,
 		Amount:    util.RandomMoney(),
 	}
 
-	entry, err := testQueries.CreateEntry(context.Background(), &arg)
+	entry, err := testStore.CreateEntry(context.Background(), &arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, entry)
 
@@ -38,12 +30,14 @@ func createRandomEntry(t *testing.T) Entry {
 }
 
 func TestCreateEntry(t *testing.T) {
-	createRandomEntry(t)
+	account := createRandomAccount(t)
+	createRandomEntry(t, account)
 }
 
 func TestGetEntry(t *testing.T) {
-	entry1 := createRandomEntry(t)
-	entry2, err := testQueries.GetEntry(context.Background(), entry1.ID)
+	account := createRandomAccount(t)
+	entry1 := createRandomEntry(t, account)
+	entry2, err := testStore.GetEntry(context.Background(), entry1.ID)
 	require.NoError(t, err)
 	require.NotEmpty(t, entry2)
 
@@ -55,14 +49,15 @@ func TestGetEntry(t *testing.T) {
 }
 
 func TestUpdateEntry(t *testing.T) {
-	entry1 := createRandomEntry(t)
+	account := createRandomAccount(t)
+	entry1 := createRandomEntry(t, account)
 
 	arg := UpdateEntryParams{
 		ID:     entry1.ID,
 		Amount: util.RandomMoney(),
 	}
 
-	entry2, err := testQueries.UpdateEntry(context.Background(), &arg)
+	entry2, err := testStore.UpdateEntry(context.Background(), &arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, entry2)
 
@@ -74,31 +69,35 @@ func TestUpdateEntry(t *testing.T) {
 }
 
 func TestDeleteEntry(t *testing.T) {
-	entry1 := createRandomEntry(t)
-	err := testQueries.DeleteEntry(context.Background(), entry1.ID)
+	account := createRandomAccount(t)
+	entry1 := createRandomEntry(t, account)
+	err := testStore.DeleteEntry(context.Background(), entry1.ID)
 	require.NoError(t, err)
 
-	entry2, err := testQueries.GetEntry(context.Background(), entry1.ID)
+	entry2, err := testStore.GetEntry(context.Background(), entry1.ID)
 	require.Error(t, err)
 	require.EqualError(t, err, pgx.ErrNoRows.Error())
 	require.Empty(t, entry2)
 }
 
-func TestListEntrys(t *testing.T) {
+func TestListEntries(t *testing.T) {
+	account := createRandomAccount(t)
 	for i := 0; i < 10; i++ {
-		createRandomEntry(t)
+		createRandomEntry(t, account)
 	}
 
 	arg := ListEntriesParams{
-		Limit:  5,
-		Offset: 5,
+		AccountID: account.ID,
+		Limit:     5,
+		Offset:    5,
 	}
 
-	entries, err := testQueries.ListEntries(context.Background(), &arg)
+	entries, err := testStore.ListEntries(context.Background(), &arg)
 	require.NoError(t, err)
 	require.Len(t, entries, 5)
 
-	for _, account := range entries {
-		require.NotEmpty(t, account)
+	for _, entry := range entries {
+		require.NotEmpty(t, entry)
+		require.Equal(t, arg.AccountID, entry.AccountID)
 	}
 }
