@@ -1,0 +1,15 @@
+name: Deploy to docker hub
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: docker build -t prosenjitjoy/simplebank .
+    - run: echo "${{secrets.DOCKER_PASSWORD}}" | docker login -u ${{secrets.DOCKER_USERNAME}} --password-stdin
+    - run: docker push prosenjitjoy/simplebank

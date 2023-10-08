@@ -39,4 +39,13 @@ run_test:
 run_server:
 	go run main.go
 
-.PHONY: create_container create_database delete_database open_database create_migration migrate_up migrate_up_last migrate_down migrate_down_last sqlc_generate mock_generate run_test run_server
+dev_deploy:
+	podman pod rm -af
+	podman rm -af
+	podman pod create -p 5000:5000 ${POD_NAME}
+	podman pod start ${POD_NAME}
+	podman run --pod ${POD_NAME} --name ${DB_CONTAINER} -e POSTGRES_USER=${DB_USER} -e POSTGRES_PASSWORD=${DB_PASS} -e POSTGRES_DB=${DB_NAME} -d postgres
+	podman build -t ${BE_CONTAINER}:latest .
+	podman run --pod ${POD_NAME} --name ${BE_CONTAINER_NAME} -e DB_SOURCE=${MIGRATE_URL} ${BE_CONTAINER}:latest
+
+.PHONY: create_container create_database delete_database open_database create_migration migrate_up migrate_up_last migrate_down migrate_down_last sqlc_generate mock_generate run_test run_server dev_deploy
