@@ -6,6 +6,7 @@ Edit .env file with right configurations. Then follow one of the way to run the 
 
 ### Kubernetes Cluster
 ```bash
+podman/docker build -t simplebank-api
 kubectl apply -f simplebank-pod.yaml
 kubectl port-forward simplebank 3000:3000
 ```

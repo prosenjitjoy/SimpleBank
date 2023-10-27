@@ -29,5 +29,5 @@ spec:
     - redis-server
     image: docker.io/library/redis:latest
     name: redis
-  - image: prosenjitjoy/simplebank:latest
+  - image: localhost/simplebank-api:latest
     name: simplebank-api
