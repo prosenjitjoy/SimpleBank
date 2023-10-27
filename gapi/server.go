@@ -6,27 +6,30 @@ import (
 	"main/pb"
 	"main/token"
 	"main/util"
+	"main/worker"
 )
 
 // Server serves gRPC request for our banking service.
 type Server struct {
-	config     *util.ConfigDatabase
-	store      db.Store
-	tokenMaker token.Maker
 	pb.UnimplementedSimpleBankServer
+	config          *util.ConfigDatabase
+	store           db.Store
+	tokenMaker      token.Maker
+	taskDistributor worker.TaskDistributor
 }
 
 // NewServer creates a new gRPC server
-func NewServer(store db.Store, cfg *util.ConfigDatabase) (*Server, error) {
+func NewServer(store db.Store, cfg *util.ConfigDatabase, taskDistributor worker.TaskDistributor) (*Server, error) {
 	tokenMaker, err := token.NewPASETOMaker(cfg.SecretKey)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create token maker: %w", err)
 	}
 
 	server := &Server{
-		config:     cfg,
-		store:      store,
-		tokenMaker: tokenMaker,
+		config:          cfg,
+		store:           store,
+		tokenMaker:      tokenMaker,
+		taskDistributor: taskDistributor,
 	}
 
 	return server, nil

@@ -1,7 +1,10 @@
 include .env
 
-create_container:
+create_postgres:
 	podman run --name ${DB_CONTAINER} -e POSTGRES_USER=${DB_USER} -e POSTGRES_PASSWORD=${DB_PASS} -p 5432:5432 -d postgres
+
+create_redis:
+	podman run --name redis -p 6379:6379 -d redis:latest
 
 create_database:
 	podman exec -it ${DB_CONTAINER} createdb --username=${DB_USER} ${DB_NAME}
@@ -35,11 +38,17 @@ mock_generate:
 
 proto_gererate:
 	rm -rf pb/*.go
-	rm -rf doc/swagger/*.json
+	rm -rf swagger/*.json
 	protoc --proto_path=proto --go_out=pb --go_opt=paths=source_relative --go-grpc_out=pb --go-grpc_opt=paths=source_relative --grpc-gateway_out=pb --grpc-gateway_opt=paths=source_relative --openapiv2_out=swagger --openapiv2_opt=allow_merge=true,merge_file_name=simplebank proto/*.proto
 
+db_docs:
+	dbdocs build doc/db.dbml
+
+db_schema:
+	dbml2sql --postgres -o doc/schema.sql doc/db.dbml
+
 run_test:
-	go test -v -cover ./...
+	go test -v -cover -short ./...
 
 run_server:
 	go run main.go
@@ -53,4 +62,4 @@ dev_deploy:
 	podman build -t ${BE_CONTAINER}:latest .
 	podman run --pod ${POD_NAME} --name ${BE_CONTAINER} -e DB_SOURCE=${MIGRATE_URL} ${BE_CONTAINER}:latest
 
-.PHONY: create_container create_database delete_database open_database create_migration migrate_up migrate_up_last migrate_down migrate_down_last sqlc_generate mock_generate proto_gererate run_test run_server dev_deploy
+.PHONY: create_postgres create_redis create_database delete_database open_database create_migration migrate_up migrate_up_last migrate_down migrate_down_last sqlc_generate mock_generate proto_gererate db_docs db_schema run_test run_server dev_deploy

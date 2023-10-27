@@ -10,6 +10,7 @@ import (
 	"main/gapi"
 	"main/pb"
 	"main/util"
+	"main/worker"
 	"net"
 	"net/http"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/hibiken/asynq"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -53,8 +55,25 @@ func main() {
 	runMigration(cfg.MigrationURL, cfg.DatabaseURL)
 
 	store := db.NewStore(conn)
-	go runGatewayServer(store, cfg)
-	runGrpcServer(store, cfg)
+
+	// redis
+	redisOpt := asynq.RedisClientOpt{Addr: cfg.RedisAddress}
+	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
+	go runTaskProcessor(redisOpt, store)
+
+	go runGatewayServer(store, cfg, taskDistributor)
+	runGrpcServer(store, cfg, taskDistributor)
+}
+
+func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store)
+	slog.Info("start task processor")
+
+	err := taskProcessor.Start()
+	if err != nil {
+		slog.Error("Failed to start task processor", slog.String("error", err.Error()))
+		return
+	}
 }
 
 func runMigration(migrationURL string, databaseURL string) {
@@ -72,7 +91,7 @@ func runMigration(migrationURL string, databaseURL string) {
 	slog.Info("db migrated successfully")
 }
 
-func runHttpServer(store *db.SQLStore, cfg *util.ConfigDatabase) {
+func runHttpServer(store db.Store, cfg *util.ConfigDatabase) {
 	server, err := api.NewServer(store, cfg)
 	if err != nil {
 		slog.Error("cannot initialize server:", slog.String("error", err.Error()))
@@ -86,8 +105,8 @@ func runHttpServer(store *db.SQLStore, cfg *util.ConfigDatabase) {
 	}
 }
 
-func runGrpcServer(store *db.SQLStore, cfg *util.ConfigDatabase) {
-	server, err := gapi.NewServer(store, cfg)
+func runGrpcServer(store db.Store, cfg *util.ConfigDatabase, taskDistributor worker.TaskDistributor) {
+	server, err := gapi.NewServer(store, cfg, taskDistributor)
 	if err != nil {
 		slog.Error("cannot initialize server:", slog.String("error", err.Error()))
 		return
@@ -113,8 +132,8 @@ func runGrpcServer(store *db.SQLStore, cfg *util.ConfigDatabase) {
 	}
 }
 
-func runGatewayServer(store *db.SQLStore, cfg *util.ConfigDatabase) {
-	server, err := gapi.NewServer(store, cfg)
+func runGatewayServer(store db.Store, cfg *util.ConfigDatabase, taskDistributor worker.TaskDistributor) {
+	server, err := gapi.NewServer(store, cfg, taskDistributor)
 	if err != nil {
 		slog.Error("cannot initialize server:", slog.String("error", err.Error()))
 		return
