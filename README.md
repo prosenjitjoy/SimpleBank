@@ -5,8 +5,12 @@ Backend master class [Golang + Postgres + Kubernetes + gRPC]
 Edit .env file with right configurations. Then follow one of the way to run the project.
 
 ### Kubernetes Cluster
+First create docker image to use inside kubernetes.
 ```bash
 podman/docker build -t simplebank-api
+```
+Then, run the following to quickly test the project.
+```bash
 kubectl apply -f simplebank-pod.yaml
 kubectl port-forward simplebank 3000:3000
 ```
