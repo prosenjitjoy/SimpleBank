@@ -57,7 +57,7 @@ run_server:
 dev_deploy:
 	podman pod rm -af
 	podman rm -af
-	podman pod create -p 3000:3000 -p 3001:3001 -p 5432:5432 ${POD_NAME}
+	podman pod create -p 3000:3000 -p 3001:3001 ${POD_NAME}
 	podman pod start ${POD_NAME}
 	podman run --pod ${POD_NAME} --name ${DB_CONTAINER} -e POSTGRES_USER=${DB_USER} -e POSTGRES_PASSWORD=${DB_PASS} -e POSTGRES_DB=${DB_NAME} -d postgres
 	podman run --pod ${POD_NAME} --name redis -d redis:latest
