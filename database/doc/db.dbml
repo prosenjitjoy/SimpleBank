@@ -7,11 +7,23 @@ Project SimpleBank {
 
 Table users {
   username text [pk]
+  role text [not null, default: 'depositor']
   hashed_password text [not null]
   full_name text [not null]
   email text [not null, unique]
+  is_email_verified boolean [not null, default: false]
   password_changed_at timestamptz [not null, default: '0001-01-01 00:00:00Z']
   created_at timestamptz [not null, default: `now()`]
+}
+
+Table verify_emails {
+  id bigserial [pk]
+  username text [not null, ref: > users.username ]
+  email text [not null]
+  secret_code text [not null]
+  is_used boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  expired_at timestamptz [not null, default: `now() + interval '15 minutes'`]
 }
 
 Table accounts {

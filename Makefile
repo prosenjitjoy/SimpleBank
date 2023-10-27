@@ -1,7 +1,7 @@
 include .env
 
 create_postgres:
-	podman run --name ${DB_CONTAINER} -e POSTGRES_USER=${DB_USER} -e POSTGRES_PASSWORD=${DB_PASS} -p 5432:5432 -d postgres
+	podman run --name ${DB_CONTAINER} -e POSTGRES_USER=${DB_USER} -e POSTGRES_PASSWORD=${DB_PASS} -p 5432:5432 -d postgres:latest
 
 create_redis:
 	podman run --name redis -p 6379:6379 -d redis:latest
@@ -16,7 +16,7 @@ open_database:
 	podman exec -it ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME}
 
 create_migration:
-	migrate create -ext sql -dir database/migration -seq create_tables
+	migrate create -ext sql -dir database/migration -seq $(name)
 
 migrate_up:
 	migrate -database ${DATABASE_URL} -path database/migration -verbose up
@@ -35,6 +35,7 @@ sqlc_generate:
 
 mock_generate:
 	mockgen -package mockdb -destination database/mockdb/store.go main/database/db Store
+	mockgen -package mockwk -destination worker/mockwk/distributor.go main/worker TaskDistributor
 
 proto_gererate:
 	rm -rf pb/*.go
@@ -42,10 +43,10 @@ proto_gererate:
 	protoc --proto_path=proto --go_out=pb --go_opt=paths=source_relative --go-grpc_out=pb --go-grpc_opt=paths=source_relative --grpc-gateway_out=pb --grpc-gateway_opt=paths=source_relative --openapiv2_out=swagger --openapiv2_opt=allow_merge=true,merge_file_name=simplebank proto/*.proto
 
 db_docs:
-	dbdocs build doc/db.dbml
+	dbdocs build database/doc/db.dbml
 
 db_schema:
-	dbml2sql --postgres -o doc/schema.sql doc/db.dbml
+	dbml2sql --postgres -o database/doc/schema.sql database/doc/db.dbml
 
 run_test:
 	go test -v -cover -short ./...
@@ -56,10 +57,11 @@ run_server:
 dev_deploy:
 	podman pod rm -af
 	podman rm -af
-	podman pod create -p 3000:3000 ${POD_NAME}
+	podman pod create -p 3000:3000 -p 3001:3001 -p 5432:5432 ${POD_NAME}
 	podman pod start ${POD_NAME}
 	podman run --pod ${POD_NAME} --name ${DB_CONTAINER} -e POSTGRES_USER=${DB_USER} -e POSTGRES_PASSWORD=${DB_PASS} -e POSTGRES_DB=${DB_NAME} -d postgres
+	podman run --pod ${POD_NAME} --name redis -d redis:latest
 	podman build -t ${BE_CONTAINER}:latest .
-	podman run --pod ${POD_NAME} --name ${BE_CONTAINER} -e DB_SOURCE=${MIGRATE_URL} ${BE_CONTAINER}:latest
+	podman run --pod ${POD_NAME} --name ${BE_CONTAINER} ${BE_CONTAINER}:latest
 
 .PHONY: create_postgres create_redis create_database delete_database open_database create_migration migrate_up migrate_up_last migrate_down migrate_down_last sqlc_generate mock_generate proto_gererate db_docs db_schema run_test run_server dev_deploy

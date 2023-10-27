@@ -16,6 +16,7 @@ type JWTMaker struct {
 type SignedDetails struct {
 	ID       uuid.UUID
 	Username string
+	Role     string
 	jwt.RegisteredClaims
 }
 
@@ -29,8 +30,8 @@ func NewJWTMaker(secretKey string) (Maker, error) {
 	}, nil
 }
 
-func (maker *JWTMaker) CreateToken(username string, duration time.Duration) (string, *Payload, error) {
-	payload, err := NewPayload(username, duration)
+func (maker *JWTMaker) CreateToken(username string, role string, duration time.Duration) (string, *Payload, error) {
+	payload, err := NewPayload(username, role, duration)
 	if err != nil {
 		return "", nil, err
 	}
@@ -66,6 +67,7 @@ func (maker *JWTMaker) VerifyToken(token string) (*Payload, error) {
 	payload := &Payload{
 		ID:        claims.ID,
 		Username:  claims.Username,
+		Role:      claims.Role,
 		IssuedAt:  claims.IssuedAt.Time,
 		ExpiredAt: claims.ExpiresAt.Time,
 	}
@@ -77,6 +79,7 @@ func payloadToClaims(payload *Payload) *SignedDetails {
 	return &SignedDetails{
 		ID:       payload.ID,
 		Username: payload.Username,
+		Role:     payload.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(payload.IssuedAt),
 			ExpiresAt: jwt.NewNumericDate(payload.ExpiredAt),

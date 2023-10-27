@@ -8,6 +8,7 @@ import (
 	"main/api"
 	"main/database/db"
 	"main/gapi"
+	"main/mail"
 	"main/pb"
 	"main/util"
 	"main/worker"
@@ -59,14 +60,15 @@ func main() {
 	// redis
 	redisOpt := asynq.RedisClientOpt{Addr: cfg.RedisAddress}
 	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
-	go runTaskProcessor(redisOpt, store)
+	go runTaskProcessor(cfg, redisOpt, store)
 
 	go runGatewayServer(store, cfg, taskDistributor)
 	runGrpcServer(store, cfg, taskDistributor)
 }
 
-func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
-	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store)
+func runTaskProcessor(cfg *util.ConfigDatabase, redisOpt asynq.RedisClientOpt, store db.Store) {
+	mailer := mail.NewGmailSender(cfg.EmailSenderName, cfg.EmailSenderAddress, cfg.EmailSenderPassword)
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer)
 	slog.Info("start task processor")
 
 	err := taskProcessor.Start()

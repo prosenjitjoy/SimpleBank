@@ -53,4 +53,16 @@ type User struct {
 	Email             string    `db:"email" json:"email"`
 	PasswordChangedAt time.Time `db:"password_changed_at" json:"password_changed_at"`
 	CreatedAt         time.Time `db:"created_at" json:"created_at"`
+	IsEmailVerified   bool      `db:"is_email_verified" json:"is_email_verified"`
+	Role              string    `db:"role" json:"role"`
+}
+
+type VerifyEmail struct {
+	ID         int64     `db:"id" json:"id"`
+	Username   string    `db:"username" json:"username"`
+	Email      string    `db:"email" json:"email"`
+	SecretCode string    `db:"secret_code" json:"secret_code"`
+	IsUsed     bool      `db:"is_used" json:"is_used"`
+	CreatedAt  time.Time `db:"created_at" json:"created_at"`
+	ExpiredAt  time.Time `db:"expired_at" json:"expired_at"`
 }

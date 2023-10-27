@@ -1,0 +1,47 @@
+# Save the output of this file and use kubectl create -f to import
+# it into Kubernetes.
+#
+# Created with podman-4.6.2
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2023-10-27T16:13:06Z"
+  labels:
+    app: simplebank
+  name: simplebank
+spec:
+  containers:
+  - args:
+    - postgres
+    env:
+    - name: POSTGRES_USER
+      value: postgres
+    - name: POSTGRES_PASSWORD
+      value: postgres
+    - name: POSTGRES_DB
+      value: bankdb
+    image: docker.io/library/postgres:latest
+    name: postgres
+    ports:
+    - containerPort: 3000
+      hostPort: 3000
+    volumeMounts:
+    - mountPath: /var/lib/postgresql/data
+      name: a1f6956cb18d8c4238f234d63f68452cddd9ba2a6801829a4383c6410d0b8de7-pvc
+  - args:
+    - redis-server
+    image: docker.io/library/redis:latest
+    name: redis
+    volumeMounts:
+    - mountPath: /data
+      name: 138876a302e70d0a713774e55b6f7cbaca2abe0c73c44f078c3fdf66a6c07bb9-pvc
+  - image: localhost/simplebank-api:latest
+    name: simplebank-api
+  volumes:
+  - name: a1f6956cb18d8c4238f234d63f68452cddd9ba2a6801829a4383c6410d0b8de7-pvc
+    persistentVolumeClaim:
+      claimName: a1f6956cb18d8c4238f234d63f68452cddd9ba2a6801829a4383c6410d0b8de7
+  - name: 138876a302e70d0a713774e55b6f7cbaca2abe0c73c44f078c3fdf66a6c07bb9-pvc
+    persistentVolumeClaim:
+      claimName: 138876a302e70d0a713774e55b6f7cbaca2abe0c73c44f078c3fdf66a6c07bb9
+

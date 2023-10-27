@@ -34,12 +34,12 @@ func (s *Server) LoginUser(ctx context.Context, req *pb.LoginUserRequest) (*pb.L
 		return nil, status.Errorf(codes.NotFound, "incorrect password: %v", err)
 	}
 
-	accessToken, accessPayload, err := s.tokenMaker.CreateToken(user.Username, s.config.TokenDuration)
+	accessToken, accessPayload, err := s.tokenMaker.CreateToken(user.Username, user.Role, s.config.TokenDuration)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create access token: %v", err)
 	}
 
-	refreshToken, refreshPayload, err := s.tokenMaker.CreateToken(user.Username, s.config.RefreshDuration)
+	refreshToken, refreshPayload, err := s.tokenMaker.CreateToken(user.Username, user.Role, s.config.RefreshDuration)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create access token: %v", err)
 	}
