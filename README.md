@@ -2,6 +2,8 @@
 Backend master class [Golang + Postgres + Kubernetes + gRPC] 
 
 ## Run
+Edit .env file with right configurations. Then follow one of the way to run the project.
+
 ### Kubernetes Cluster
 ```bash
 kubectl apply -f simplebank-pod.yaml
