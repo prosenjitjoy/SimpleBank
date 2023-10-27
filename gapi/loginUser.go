@@ -5,7 +5,7 @@ import (
 	"main/database/db"
 	"main/pb"
 	"main/util"
-	"main/val"
+	"main/validate"
 
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -72,11 +72,11 @@ func (s *Server) LoginUser(ctx context.Context, req *pb.LoginUserRequest) (*pb.L
 }
 
 func validateLoginUserRequest(req *pb.LoginUserRequest) (violations []*errdetails.BadRequest_FieldViolation) {
-	if err := val.ValidateUsername(req.GetUsername()); err != nil {
+	if err := validate.ValidateUsername(req.GetUsername()); err != nil {
 		violations = append(violations, fieldViolation("username", err))
 	}
 
-	if err := val.ValidatePassword(req.GetPassword()); err != nil {
+	if err := validate.ValidatePassword(req.GetPassword()); err != nil {
 		violations = append(violations, fieldViolation("password", err))
 	}
 

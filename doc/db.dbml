@@ -1,0 +1,53 @@
+Project SimpleBank {
+  database_type: 'PostgreSQL'
+  Note: '''
+    # SimpleBank Database
+  '''
+}
+
+Table users {
+  username text [pk]
+  hashed_password text [not null]
+  full_name text [not null]
+  email text [not null, unique]
+  password_changed_at timestamptz [not null, default: '0001-01-01 00:00:00Z']
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table accounts {
+  id bigserial [pk]
+  owner text [not null, ref: > users.username]
+  balance bigint [not null]
+  currency text [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    owner
+    (owner, currency) [unique]
+  }
+}
+
+Table entries {
+  id bigserial [pk]
+  account_id bigint [not null, ref: > accounts.id]
+  amount bigint [not null, note: "can be negative or positive"]
+  created_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    account_id
+  }
+}
+
+Table transfers {
+  id bigserial [pk]
+  from_account_id bigint [not null, ref: > accounts.id]
+  to_account_id bigint [not null, ref: > accounts.id]
+  amount bigint [not null, note: "must be positive"]
+  created_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    from_account_id
+    to_account_id
+    (from_account_id, to_account_id)
+  }
+}

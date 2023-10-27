@@ -5,7 +5,7 @@ import (
 	"main/database/db"
 	"main/pb"
 	"main/util"
-	"main/val"
+	"main/validate"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -63,24 +63,24 @@ func (s *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb
 }
 
 func validateUpdateUserRequest(req *pb.UpdateUserRequest) (violations []*errdetails.BadRequest_FieldViolation) {
-	if err := val.ValidateUsername(req.GetUsername()); err != nil {
+	if err := validate.ValidateUsername(req.GetUsername()); err != nil {
 		violations = append(violations, fieldViolation("username", err))
 	}
 
 	if req.Password != nil {
-		if err := val.ValidatePassword(req.GetPassword()); err != nil {
+		if err := validate.ValidatePassword(req.GetPassword()); err != nil {
 			violations = append(violations, fieldViolation("password", err))
 		}
 	}
 
 	if req.FullName != nil {
-		if err := val.ValidateFullname(req.GetFullName()); err != nil {
+		if err := validate.ValidateFullname(req.GetFullName()); err != nil {
 			violations = append(violations, fieldViolation("full_name", err))
 		}
 	}
 
 	if req.Email != nil {
-		if err := val.ValidateEmail(req.GetEmail()); err != nil {
+		if err := validate.ValidateEmail(req.GetEmail()); err != nil {
 			violations = append(violations, fieldViolation("email", err))
 		}
 	}
