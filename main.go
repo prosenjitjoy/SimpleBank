@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"log/slog"
 	"main/api"
@@ -15,11 +16,14 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/hibiken/asynq"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -30,6 +34,12 @@ import (
 
 //go:embed swagger/*
 var content embed.FS
+
+var interruptSignals = []os.Signal{
+	os.Interrupt,
+	syscall.SIGTERM,
+	syscall.SIGINT,
+}
 
 func main() {
 	cfg, err := util.LoadConfig(".env")
@@ -46,7 +56,10 @@ func main() {
 		slog.SetDefault(logger)
 	}
 
-	conn, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+	ctx, stop := signal.NotifyContext(context.Background(), interruptSignals...)
+	defer stop()
+
+	conn, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		slog.Error("cannot connect to db:", slog.String("error", err.Error()))
 		return
@@ -60,13 +73,20 @@ func main() {
 	// redis
 	redisOpt := asynq.RedisClientOpt{Addr: cfg.RedisAddress}
 	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
-	go runTaskProcessor(cfg, redisOpt, store)
 
-	go runGatewayServer(store, cfg, taskDistributor)
-	runGrpcServer(store, cfg, taskDistributor)
+	waitGroup, ctx := errgroup.WithContext(ctx)
+	runTaskProcessor(ctx, waitGroup, cfg, redisOpt, store)
+	runGatewayServer(ctx, waitGroup, store, cfg, taskDistributor)
+	runGrpcServer(ctx, waitGroup, store, cfg, taskDistributor)
+
+	err = waitGroup.Wait()
+	if err != nil {
+		slog.Error("error from wait group")
+		return
+	}
 }
 
-func runTaskProcessor(cfg *util.ConfigDatabase, redisOpt asynq.RedisClientOpt, store db.Store) {
+func runTaskProcessor(ctx context.Context, waitGroup *errgroup.Group, cfg *util.ConfigDatabase, redisOpt asynq.RedisClientOpt, store db.Store) {
 	mailer := mail.NewGmailSender(cfg.EmailSenderName, cfg.EmailSenderAddress, cfg.EmailSenderPassword)
 	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer)
 	slog.Info("start task processor")
@@ -76,6 +96,15 @@ func runTaskProcessor(cfg *util.ConfigDatabase, redisOpt asynq.RedisClientOpt, s
 		slog.Error("Failed to start task processor", slog.String("error", err.Error()))
 		return
 	}
+
+	waitGroup.Go(func() error {
+		<-ctx.Done()
+		slog.Info("graceful shutdown task processor")
+		taskProcessor.Shutdown()
+		slog.Info("task processor is stopped")
+
+		return nil
+	})
 }
 
 func runMigration(migrationURL string, databaseURL string) {
@@ -107,7 +136,7 @@ func runHttpServer(store db.Store, cfg *util.ConfigDatabase) {
 	}
 }
 
-func runGrpcServer(store db.Store, cfg *util.ConfigDatabase, taskDistributor worker.TaskDistributor) {
+func runGrpcServer(ctx context.Context, waitGroup *errgroup.Group, store db.Store, cfg *util.ConfigDatabase, taskDistributor worker.TaskDistributor) {
 	server, err := gapi.NewServer(store, cfg, taskDistributor)
 	if err != nil {
 		slog.Error("cannot initialize server:", slog.String("error", err.Error()))
@@ -126,15 +155,31 @@ func runGrpcServer(store db.Store, cfg *util.ConfigDatabase, taskDistributor wor
 		return
 	}
 
-	slog.Info(fmt.Sprintf("starting gRPC server at %s", listener.Addr().String()))
-	err = grpcServer.Serve(listener)
-	if err != nil {
-		slog.Error("cannot start gRPC server:", slog.String("error", err.Error()))
-		return
-	}
+	waitGroup.Go(func() error {
+		slog.Info(fmt.Sprintf("starting gRPC server at %s", listener.Addr().String()))
+		err = grpcServer.Serve(listener)
+		if err != nil {
+			if errors.Is(err, grpc.ErrServerStopped) {
+				return nil
+			}
+			slog.Error("gRPC server failed to serve", slog.String("error", err.Error()))
+			return err
+		}
+
+		return nil
+	})
+
+	waitGroup.Go(func() error {
+		<-ctx.Done()
+		slog.Info("graceful shutdown gRPC server")
+		grpcServer.GracefulStop()
+		slog.Info("gRPC server is stopped")
+
+		return nil
+	})
 }
 
-func runGatewayServer(store db.Store, cfg *util.ConfigDatabase, taskDistributor worker.TaskDistributor) {
+func runGatewayServer(ctx context.Context, waitGroup *errgroup.Group, store db.Store, cfg *util.ConfigDatabase, taskDistributor worker.TaskDistributor) {
 	server, err := gapi.NewServer(store, cfg, taskDistributor)
 	if err != nil {
 		slog.Error("cannot initialize server:", slog.String("error", err.Error()))
@@ -151,8 +196,6 @@ func runGatewayServer(store db.Store, cfg *util.ConfigDatabase, taskDistributor 
 	})
 
 	grpcMux := runtime.NewServeMux(jsonOption)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	err = pb.RegisterSimpleBankHandlerServer(ctx, grpcMux, server)
 	if err != nil {
@@ -166,18 +209,37 @@ func runGatewayServer(store db.Store, cfg *util.ConfigDatabase, taskDistributor 
 	fs := http.FileServer(http.FS(content))
 	mux.Handle("/doc/", http.StripPrefix("/doc/", fs))
 
-	listener, err := net.Listen("tcp", cfg.HTTPServerAddress)
-	if err != nil {
-		slog.Error("cannot create listener:", slog.String("error", err.Error()))
-		return
+	httpServer := &http.Server{
+		Handler: gapi.HttpLogger(mux),
+		Addr:    cfg.HTTPServerAddress,
 	}
 
-	slog.Info(fmt.Sprintf("starting HTTP gateway server at %s", listener.Addr().String()))
+	waitGroup.Go(func() error {
+		slog.Info(fmt.Sprintf("starting HTTP gateway server at %s", httpServer.Addr))
 
-	handler := gapi.HttpLogger(mux)
+		err = httpServer.ListenAndServe()
+		if err != nil {
+			if errors.Is(err, http.ErrServerClosed) {
+				return nil
+			}
+			slog.Error("HTTP gateway server failed to server:", err)
+			return err
+		}
 
-	err = http.Serve(listener, handler)
-	if err != nil {
-		slog.Error("cannot start HTTP gateway server:", err)
-	}
+		return nil
+	})
+
+	waitGroup.Go(func() error {
+		<-ctx.Done()
+		slog.Info("graceful shutdown HTTP gateway server")
+
+		err = httpServer.Shutdown(context.Background())
+		if err != nil {
+			slog.Error("failed to shutdown HTTP gateway server")
+			return err
+		}
+
+		slog.Info("HTTP gateway server is stopped")
+		return nil
+	})
 }
