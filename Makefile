@@ -37,7 +37,7 @@ mock_generate:
 	mockgen -package mockdb -destination database/mockdb/store.go main/database/db Store
 	mockgen -package mockwk -destination worker/mockwk/distributor.go main/worker TaskDistributor
 
-proto_gererate:
+proto_generate:
 	rm -rf pb/*.go
 	rm -rf swagger/*.json
 	protoc --proto_path=proto --go_out=pb --go_opt=paths=source_relative --go-grpc_out=pb --go-grpc_opt=paths=source_relative --grpc-gateway_out=pb --grpc-gateway_opt=paths=source_relative --openapiv2_out=swagger --openapiv2_opt=allow_merge=true,merge_file_name=simplebank proto/*.proto
